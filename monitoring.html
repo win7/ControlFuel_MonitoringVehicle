@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>
+	  		Monitoring
+		</title>
+	  	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css">
+	  	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap-theme.min.css">
+		<style>
+			#map {
+                height: 100%;
+            }
+            /* Optional: Makes the sample page fill the window. */
+            html, body {
+                height: 99%;
+                margin: 0;
+                padding: 0;
+            }
+
+	  		#container{
+				width: 300px;
+				height: 300px;
+				position: absolute;
+				right: 2px;
+				top: 62px;
+	  		} 
+		</style>
+  	</head>
+  	<body>
+		<h3><center>Control Fuel and Monitoring</center></h3>
+		<div id="map"></div>
+		<!-- <div id="legend"><h3>Legend</h3></div> -->
+		<!-- <div id="container" style="min-width: 310px; max-width: 400px; height: 300px; margin: 0 auto"></div> -->
+		<div id="container"></div>
+	
+		<script src="/socket.io/socket.io.js"></script>
+		<script src="https://code.jquery.com/jquery.js"></script>
+   
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+
+		<script src="https://code.highcharts.com/highcharts.js"></script>
+		<script src="https://code.highcharts.com/highcharts-more.js"></script>
+		<!-- <script src="https://code.highcharts.com/modules/exporting.js"></script> -->
+
+		<script>
+			var socket = io.connect('http://' + location.host);
+			var nivel = 0;
+			var latitude = -13.522480;
+			var longitude = -71.961224;			
+
+	  		function initMap() {
+				var location = {lat: latitude, lng: longitude};
+				var map = new google.maps.Map(document.getElementById('map'), {
+		  			zoom: 16,
+		  			center: location
+				});
+				var marker = new google.maps.Marker({
+		  			position: location,
+		  			map: map,
+		  			icon: "http://159.203.189.206:8050/static/style/img/car_.png"
+				});
+				var k = 0.00001;
+				setInterval(function () {
+					k += 0.00001;
+					console.log(latitude);
+					location = {lat: latitude, lng: longitude};
+					marker.setPosition(location = location);
+				}, 1000);
+	  		}
+
+	  		var chart_nivel = Highcharts.chart('container', {
+				chart: {
+					type: 'gauge',
+					plotBackgroundColor: null,
+					plotBackgroundImage: null,
+					plotBorderWidth: 0,
+					plotShadow: false
+				},
+				title: {
+					text: 'Combustible'
+				},
+				pane: {
+					startAngle: -150,
+					endAngle: 150,
+					background: [{
+						backgroundColor: {
+							linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+							stops: [
+								[0, '#FFF'],
+								[1, '#333']
+							]
+						},
+						borderWidth: 0,
+						outerRadius: '109%'
+					}, {
+						backgroundColor: {
+							linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
+							stops: [
+								[0, '#333'],
+								[1, '#FFF']
+							]
+						},
+						borderWidth: 1,
+						outerRadius: '107%'
+					}, {
+						// default background
+					}, {
+						backgroundColor: '#DDD',
+						borderWidth: 0,
+						outerRadius: '105%',
+						innerRadius: '103%'
+					}]
+				},
+					// the value axis
+				yAxis: {
+					min: 0,
+					max: 100,
+
+					minorTickInterval: 'auto',
+					minorTickWidth: 1,
+					minorTickLength: 10,
+					minorTickPosition: 'inside',
+					minorTickColor: '#666',
+
+					tickPixelInterval: 30,
+					tickWidth: 2,
+					tickPosition: 'inside',
+					tickLength: 10,
+					tickColor: '#666',
+					labels: {
+						step: 2,
+						rotation: 'auto'
+					},
+					title: {
+						text: '%'
+					},
+					plotBands: [{
+						from: 0,
+						to: 30,
+						color: '#DF5353' // red
+					}, {
+						from: 30,
+						to: 70,
+						color: '#DDDF0D' // yellow
+					}, {
+						from: 70,
+						to: 100,
+						color: '#55BF3B' // green 
+					}]
+				},
+				series: [{
+					name: 'Speed',
+					data: [50],
+					tooltip: {
+						valueSuffix: ' Porcentaje'
+					}
+				}]
+			},
+			// Add some life
+			function (chart) {
+				var old_nivel = 0;
+				if (!chart.renderer.forExport) {
+					setInterval(function () {
+						var point = chart.series[0].points[0],
+							newVal,
+							inc = nivel - old_nivel;
+			            newVal = point.y + inc;
+			            if (newVal < 0 || newVal > 100) {
+			                newVal = point.y - inc;
+			            }
+			            old_nivel = newVal;
+						point.update(newVal);
+					}, 1000);
+				}
+			});
+
+			socket.on('data update', function (data) {
+				nivel = parseInt(data["Nivel"]);
+				latitude = parseFloat(data["GPSLatitud"]);
+				longitude = parseFloat(data["GPSLongitud"]);
+			});
+		</script>
+
+		<script async defer
+	  		src="https://maps.googleapis.com/maps/api/js?callback=initMap">
+		</script>
+  </body>
+</html>
